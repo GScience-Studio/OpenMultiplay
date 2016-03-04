@@ -1,6 +1,8 @@
 
 // IOCP_TCPIP_Socket_Server.cpp
 
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+
 #include <WinSock2.h>
 #include <Windows.h>
 #include <vector>
@@ -37,7 +39,6 @@ typedef struct
 }PER_HANDLE_DATA, *LPPER_HANDLE_DATA;
 
 // 定义全局变量
-const int DefaultPort = 6000;
 vector < PER_HANDLE_DATA* > clientGroup;		// 记录客户端的向量组
 
 HANDLE hMutex = CreateMutex(NULL, FALSE, NULL);
@@ -45,7 +46,7 @@ DWORD WINAPI ServerWorkThread(LPVOID CompletionPortID);
 DWORD WINAPI ServerSendThread(LPVOID IpParam);
 
 // 开始主函数
-int CreateMain()
+int CreateServerMain(int Port,char* IP)
 {
 	// 加载socket动态链接库
 	WORD wVersionRequested = MAKEWORD(2, 2); // 请求2.2版本的WinSock库
@@ -104,9 +105,10 @@ int CreateMain()
 
 	// 绑定SOCKET到本机
 	SOCKADDR_IN srvAddr;
-	srvAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 	srvAddr.sin_family = AF_INET;
-	srvAddr.sin_port = htons(DefaultPort);
+	srvAddr.sin_port = htons(Port);
+	srvAddr.sin_addr.S_un.S_addr = inet_addr(IP);
+
 	int bindResult = bind(srvSocket, (SOCKADDR*)&srvAddr, sizeof(SOCKADDR));
 	if (SOCKET_ERROR == bindResult) {
 		cerr << "Bind failed. Error:" << GetLastError() << endl;

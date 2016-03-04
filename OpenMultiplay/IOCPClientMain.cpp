@@ -15,9 +15,8 @@ using namespace std;
 
 SOCKET sockClient;		// 连接成功后的套接字
 HANDLE bufferMutex;		// 令其能互斥成功正常通信的信号量句柄
-const int DefaultPort = 6000;
 
-int CreateClient()
+int CreateClientMain(int Port,char* IP)
 {
 	// 加载socket动态链接库(dll)
 	WORD wVersionRequested;
@@ -46,9 +45,9 @@ int CreateClient()
 	// 第二个参数：设定所需要连接的地址信息
 	// 第三个参数：地址的长度
 	SOCKADDR_IN addrSrv;
-	addrSrv.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");		// 本地回路地址是127.0.0.1; 
+	addrSrv.sin_addr.S_un.S_addr = inet_addr(IP);		// 本地回路地址是127.0.0.1; 
 	addrSrv.sin_family = AF_INET;
-	addrSrv.sin_port = htons(DefaultPort);
+	addrSrv.sin_port = htons(Port);
 	while (SOCKET_ERROR == connect(sockClient, (SOCKADDR*)&addrSrv, sizeof(SOCKADDR))) {
 		// 如果还没连接上服务器则要求重连
 		cout << "服务器连接失败，是否重新连接？（Y/N):";
@@ -98,20 +97,10 @@ int CreateClient()
 DWORD WINAPI SendMessageThread(LPVOID IpParameter)
 {
 	while (1) {
-		string talk;
-		getline(cin, talk);
 		WaitForSingleObject(bufferMutex, INFINITE);		// P（资源未被占用）  
-		if ("quit" == talk) {
-			talk.push_back('\0');
-			send(sockClient, talk.c_str(), 200, 0);
-			break;
-		}
-		else {
-			talk.append("\n");
-		}
-		printf("\nI Say:(\"quit\"to exit):");
-		cout << talk;
-		send(sockClient, talk.c_str(), 200, 0);	// 发送信息
+
+		send(sockClient, "123", 200, 0);	// 发送信息
+
 		ReleaseSemaphore(bufferMutex, 1, NULL);		// V（资源占用完毕） 
 	}
 	return 0;
@@ -122,7 +111,10 @@ DWORD WINAPI ReceiveMessageThread(LPVOID IpParameter)
 {
 	while (1) {
 		char recvBuf[300];
-		recv(sockClient, recvBuf, 200, 0);
+
+		if (recv(sockClient, recvBuf, 200, 0) == SOCKET_ERROR)
+			break;
+
 		WaitForSingleObject(bufferMutex, INFINITE);		// P（资源未被占用）  
 
 		printf("%s Says: %s", "Server", recvBuf);		// 接收信息
